@@ -209,13 +209,13 @@
     .result-input { min-width: 0; font-size: 0.82rem; }
     .copy-button { width: auto; min-width: 92px; padding: 10px; }
 
+    .save-button { margin-top: 12px; background: #b77b36; }
+    .save-button:hover:not(:disabled) { background: #946027; }
+
     .note {
       margin: 18px 0 0;
-      padding: 14px 16px;
-      color: var(--accent-dark);
-      background: var(--soft);
-      border-left: 3px solid var(--accent);
-      font: 0.85rem/1.5 Arial, sans-serif;
+      color: var(--muted);
+      font: 0.75rem/1.5 Arial, sans-serif;
     }
 
     @media (max-width: 560px) {
@@ -249,11 +249,11 @@
           <div>
             <label for="deleteAfter">Delete after</label>
             <select id="deleteAfter" name="deleteAfter">
-              <option value="86400" selected>24 hours</option>
-              <option value="3600">1 hour</option>
-              <option value="259200">3 days</option>
-              <option value="604800">7 days</option>
-              <option value="2592000">30 days</option>
+              <option value="86400" data-form-value="24" selected>24 hours</option>
+              <option value="3600" data-form-value="1">1 hour</option>
+              <option value="259200" data-form-value="72">3 days</option>
+              <option value="604800" data-form-value="168">7 days</option>
+              <option value="2592000" data-form-value="720">30 days</option>
             </select>
           </div>
           <div>
@@ -284,13 +284,17 @@
             <button class="copy-button" type="button" data-copy="deleteUrl">Copy</button>
           </div>
         </div>
-        <p class="note"><strong>Remember:</strong> save the deletion URL if you may want to delete this image before it expires. This app does not save your upload data.</p>
+        <button class="save-button" id="saveButton" type="button">Save links to form</button>
+        <p class="note">This opens the Google Form in the same tab with the image URL and deletion time prefilled.</p>
       </section>
     </section>
   </main>
 
   <script>
     const API_KEY = '99fd13f041920cf0cd835e1ff0e1652e';
+    const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSf9CUV0rV_DLiCBHfS4kLfsdCjEG2hVItfedH3TdefHeSqYSw/viewform?usp=pp_url';
+    const IMAGE_ENTRY = 'entry.1209964627';
+    const DELETE_AFTER_ENTRY = 'entry.382601663';
 
     const form = document.querySelector('#uploadForm');
     const fileInput = document.querySelector('#imageFile');
@@ -303,6 +307,7 @@
     const results = document.querySelector('#results');
     const imageUrl = document.querySelector('#imageUrl');
     const deleteUrl = document.querySelector('#deleteUrl');
+    const saveButton = document.querySelector('#saveButton');
     let selectedFiles = [];
 
     function getImageFiles(fileList) {
@@ -379,12 +384,22 @@
         if (!response.ok || !data.success) throw new Error(data.error?.message || 'The image could not be uploaded.');
         imageUrl.value = data.data.url;
         deleteUrl.value = data.data.delete_url;
+        storeUploadData(data.data.url, data.data.delete_url);
         results.classList.add('visible');
-        status.textContent = 'Upload complete. Remember to save the deletion URL if you may need it later.';
+        status.textContent = 'Upload complete.';
       } catch (error) {
         status.textContent = error.message;
         status.className = 'status error';
       }
+    }
+
+    function storeUploadData(uploadedImageUrl, uploadedDeleteUrl) {
+      if (!window.InternalData) return;
+      const deleteAfter = document.querySelector('#deleteAfter').selectedOptions[0].dataset.formValue;
+      window.InternalData.put('image_url', uploadedImageUrl);
+      window.InternalData.put('delete_url', uploadedDeleteUrl);
+      window.InternalData.put('delete_after', deleteAfter);
+      window.InternalData.setPolicy('allow');
     }
 
     function selectFiles(fileList) {
@@ -432,6 +447,16 @@
       button.textContent = 'Copied';
       setTimeout(() => { button.textContent = oldText; }, 1400);
     }));
+
+    saveButton.addEventListener('click', () => {
+      const deleteAfter = document.querySelector('#deleteAfter').selectedOptions[0].dataset.formValue;
+      const params = new URLSearchParams({
+        usp: 'pp_url',
+        [IMAGE_ENTRY]: imageUrl.value,
+        [DELETE_AFTER_ENTRY]: deleteAfter
+      });
+      window.location.href = `${FORM_URL.split('?')[0]}?${params.toString()}`;
+    });
   </script>
 </body>
 </html>
