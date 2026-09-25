@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YAN1 - Shared Result</title>
+  <style>
+    :root {
+      --ink: #e9edff;
+      --muted: #9aa5c7;
+      --page: #080b18;
+      --panel: #11162a;
+      --cell: #181e35;
+      --line: #252c48;
+      --accent: #5865f2;
+      --success: #67e8a5;
+      --danger: #ff6b6b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(88, 101, 242, 0.2), transparent 34%),
+        radial-gradient(circle at 92% 100%, rgba(103, 232, 165, 0.1), transparent 30%),
+        var(--page);
+      font-family: Arial, sans-serif;
+    }
+
+    main {
+      width: min(900px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 56px 0 72px;
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--success);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: #fff;
+      font-size: clamp(2.2rem, 7vw, 4.8rem);
+      font-weight: 700;
+      line-height: 0.98;
+    }
+
+    .query {
+      margin: 18px 0 34px;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+
+    .query strong { color: var(--ink); }
+
+    #status {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    #status.success { color: var(--success); }
+    #status.error { color: var(--danger); }
+
+    #results {
+      display: grid;
+      gap: 16px;
+    }
+
+    .result-card {
+      padding: 22px;
+      background: rgba(17, 22, 42, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+    }
+
+    .result-title {
+      margin: 0 0 16px;
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .cell {
+      margin-top: 10px;
+      padding: 12px 14px;
+      background: var(--cell);
+      border-radius: 6px;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+    }
+
+    .cell-label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .empty {
+      padding: 24px;
+      background: rgba(17, 22, 42, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 560px) {
+      main { width: min(100% - 24px, 900px); padding-top: 36px; }
+      .result-card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">YAN1 shared result</p>
+    <h1>Matching sheet data</h1>
+    <p class="query" id="queryText">Checking the shared value...</p>
+    <p id="status" role="status" aria-live="polite">Searching the Google Sheet...</p>
+    <section id="results" aria-live="polite"></section>
+  </main>
+
+  <script>
+    function isYAN1App() {
+      return window.AndroidPython && typeof window.AndroidPython.executePython === "function";
+    }
+
+    function openInYAN1App() {
+      if (isYAN1App()) return;
+      if (sessionStorage.getItem("yan1_launched") === "true") return;
+      sessionStorage.setItem("yan1_launched", "true");
+
+      const currentURL = window.location.href;
+      const cleanPath = currentURL.replace(/^https?:\/\//, "");
+      const intentURL =
+        "intent://" + cleanPath +
+        "#Intent;scheme=https;package=com.example1.yan1appgen1;" +
+        "S.browser_fallback_url=" + encodeURIComponent(currentURL) + ";end;";
+
+      window.location.href = intentURL;
+    }
+
+    setTimeout(openInYAN1App, 1200);
+
+    const SPREADSHEET_ID = "1wH5g2bnCNEeTNtP2_fzrssaVXtsW8lYsMPTj1zgRjQY";
+    const SHEET_NAME = "Form Responses 1";
+    const queryValue = new URLSearchParams(window.location.search).get("text");
+    const queryText = document.getElementById("queryText");
+    const status = document.getElementById("status");
+    const results = document.getElementById("results");
+
+    function gvizURL(query) {
+      return "https://docs.google.com/spreadsheets/d/" +
+        SPREADSHEET_ID +
+        "/gviz/tq?sheet=" + encodeURIComponent(SHEET_NAME) +
+        "&tqx=out:json&tq=" + encodeURIComponent(query);
+    }
+
+    async function getGViz(query) {
+      const response = await fetch(gvizURL(query));
+      if (!response.ok) throw new Error("Google Sheet request failed: " + response.status);
+
+      const text = await response.text();
+      const start = text.indexOf("(");
+      const end = text.lastIndexOf(")");
+      if (start === -1 || end === -1) throw new Error("Invalid Google Sheet response.");
+
+      const data = JSON.parse(text.slice(start + 1, end));
+      if (data.status === "error") {
+        const firstError = data.errors && data.errors[0];
+        throw new Error(firstError ? (firstError.detailed_message || firstError.message) : "Google Sheets returned an error.");
+      }
+      return data;
+    }
+
+    function cellValue(cell) {
+      if (!cell || cell.v === null || cell.v === undefined) return "";
+      return cell.f !== undefined ? String(cell.f) : String(cell.v);
+    }
+
+    function displayRows(rows) {
+      results.replaceChildren();
+
+      rows.forEach((row, rowIndex) => {
+        const card = document.createElement("article");
+        const title = document.createElement("h2");
+        title.className = "result-title";
+        title.textContent = "Matching row " + (rowIndex + 1);
+        card.className = "result-card";
+        card.appendChild(title);
+
+        (row.c || []).forEach((cell, columnIndex) => {
+          const value = cellValue(cell);
+          if (!value.trim()) return;
+
+          const cellElement = document.createElement("div");
+          const label = document.createElement("span");
+          const valueElement = document.createElement("span");
+          cellElement.className = "cell";
+          label.className = "cell-label";
+          label.textContent = "Column " + String.fromCharCode(65 + columnIndex);
+          valueElement.textContent = value;
+          cellElement.append(label, valueElement);
+          card.appendChild(cellElement);
+        });
+
+        results.appendChild(card);
+      });
+    }
+
+    async function findMatchingRows() {
+      if (!queryValue || !queryValue.trim()) {
+        queryText.textContent = "No text value was provided in the link.";
+        status.textContent = "Add a value such as ?text=email@example.com to search.";
+        status.className = "error";
+        return;
+      }
+
+      const searchText = queryValue.trim();
+      queryText.innerHTML = "Searching for: <strong></strong>";
+      queryText.querySelector("strong").textContent = searchText;
+
+      try {
+        const escapedText = searchText.replace(/'/g, "''").toLowerCase();
+        const query = "select * where lower(B) contains '" + escapedText + "' limit 50";
+        const data = await getGViz(query);
+        const rows = data.table && data.table.rows ? data.table.rows : [];
+
+        if (!rows.length) {
+          status.textContent = "No matching rows were found in column B.";
+          status.className = "error";
+          results.innerHTML = '<div class="empty">No sheet data matched this value.</div>';
+          return;
+        }
+
+        displayRows(rows);
+        status.textContent = rows.length + " matching row" + (rows.length === 1 ? "" : "s") + " found.";
+        status.className = "success";
+      } catch (error) {
+        status.textContent = "Search failed: " + error.message;
+        status.className = "error";
+      }
+    }
+
+    findMatchingRows();
+  </script>
+</body>
+</html>
