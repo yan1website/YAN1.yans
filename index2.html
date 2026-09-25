@@ -363,27 +363,6 @@
 
 <script>
 
-    function isYAN1App() {
-        return (window.AndroidPython && typeof window.AndroidPython.executePython === "function");
-    }
-
-    function openInYAN1App() {
-        if (isYAN1App()) return;
-        if (sessionStorage.getItem("yan1_launched") === "true") return;
-        sessionStorage.setItem("yan1_launched", "true");
-
-        const currentURL = window.location.href;
-        const cleanPath = currentURL.replace(/^https?:\/\//, "");
-        const intentURL =
-            "intent://" + cleanPath + "#Intent;" +
-            "scheme=https;" +
-            "package=com.example1.yan1appgen1;" +
-            "S.browser_fallback_url=" + encodeURIComponent(currentURL) + ";" +
-            "end;";
-
-        window.location.href = intentURL;
-    }
-
     // =========================================================
     // GOOGLE SHEET SETTINGS
     // =========================================================
@@ -891,109 +870,45 @@
     // DISPLAY ONE ROW
     // =========================================================
 
-    function showShareMenu(shareURL) {
-
-        const overlay = document.createElement("div");
-        overlay.className = "share-overlay";
-
-        const menu = document.createElement("div");
-        menu.className = "share-menu";
-        menu.setAttribute("role", "dialog");
-        menu.setAttribute("aria-label", "Share link");
-        menu.setAttribute("aria-modal", "true");
-
-        const title = document.createElement("p");
-        title.className = "share-menu-title";
-        title.textContent = "Share link";
-        menu.appendChild(title);
-
-        const subtitle = document.createElement("p");
-        subtitle.className = "share-menu-subtitle";
-        subtitle.textContent = "Choose a destination";
-        menu.appendChild(subtitle);
-
-        const actions = document.createElement("div");
-        actions.className = "share-menu-actions";
-
-        const destinations = [
-            ["WhatsApp", "◉", "https://api.whatsapp.com/send?text=" + encodeURIComponent(shareURL)],
-            ["Telegram", "➤", "https://t.me/share/url?url=" + encodeURIComponent(shareURL)],
-            ["Facebook", "f", "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(shareURL)],
-            ["Email", "✉", "mailto:?subject=" + encodeURIComponent("YAN1 link") + "&body=" + encodeURIComponent(shareURL)]
-        ];
-
-        destinations.forEach(([label, icon, destinationURL]) => {
-            const option = document.createElement("div");
-            option.className = "share-option";
-            const button = document.createElement("button");
-            button.type = "button";
-            button.textContent = icon;
-            button.title = label;
-            button.setAttribute("aria-label", "Share with " + label);
-            button.addEventListener("click", () => {
-                window.open(destinationURL, "_blank", "noopener,noreferrer");
-                overlay.remove();
-                menu.remove();
-            });
-            option.appendChild(button);
-            actions.appendChild(option);
-        });
-
-        const copyOption = document.createElement("div");
-        copyOption.className = "share-option";
-        const copyButton = document.createElement("button");
-        copyButton.type = "button";
-        copyButton.textContent = "🔗";
-        copyButton.title = "Copy link";
-        copyButton.setAttribute("aria-label", "Copy link");
-        copyButton.addEventListener("click", async () => {
-            try {
-                await navigator.clipboard.writeText(shareURL);
-                logActivity("Share link copied to the clipboard.", "success");
-                overlay.remove();
-                menu.remove();
-            } catch (error) {
-                window.prompt("Copy this permanent link:", shareURL);
-            }
-        });
-        copyOption.appendChild(copyButton);
-        actions.appendChild(copyOption);
-        menu.appendChild(actions);
-
-        const closeButton = document.createElement("button");
-        closeButton.type = "button";
-        closeButton.className = "share-close";
-        closeButton.textContent = "Close";
-        closeButton.addEventListener("click", () => {
-            overlay.remove();
-            menu.remove();
-        });
-        menu.appendChild(closeButton);
-
-        overlay.addEventListener("click", () => {
-            overlay.remove();
-            menu.remove();
-        });
-
-        document.body.appendChild(overlay);
-        document.body.appendChild(menu);
-    }
-
-    async function shareWebsite(shareURL = window.location.href) {
+    function shareMyLink(urlToShare, titleToShare) {
 
         if (navigator.share) {
-            await navigator.share({
-                title: "YAN1",
-                text: "Check out this awesome page:",
-                url: shareURL
+            navigator.share({
+                title: titleToShare || "Check this out!",
+                text: "Take a look at this link:",
+                url: urlToShare
+            }).then(() => {
+                logActivity("Share sheet opened.", "success");
+            }).catch(error => {
+                if (error.name !== "AbortError") {
+                    logActivity("Sharing was cancelled or unavailable.", "error");
+                }
             });
-            return true;
+            return;
         }
 
-        return false;
+        logActivity("Web Share API not available in this browser.", "error");
     }
 
-    async function shareRow(columnBValue) {
+    function shareCurrentPage() {
+
+        if (navigator.share) {
+            navigator.share({
+                title: document.title,
+                text: "Check out this page:",
+                url: window.location.href
+            }).catch(error => {
+                if (error.name !== "AbortError") {
+                    logActivity("Sharing was cancelled or unavailable.", "error");
+                }
+            });
+            return;
+        }
+
+        logActivity("Web Share API not available in this browser.", "error");
+    }
+
+    function shareRow(columnBValue) {
 
         const text = String(columnBValue || "").trim();
 
@@ -1006,20 +921,7 @@
             "https://yan1website.github.io/YAN1.yans/index3.html?text=" +
             encodeURIComponent(text);
 
-        try {
-            if (await shareWebsite(shareURL)) {
-                logActivity("Share link opened for column B.", "success");
-                return;
-            }
-
-            logActivity("Web Share API is unavailable in this browser.", "error");
-        } catch (error) {
-            if (error.name === "AbortError") {
-                return;
-            }
-
-            logActivity("Sharing was cancelled or unavailable.", "error");
-        }
+        shareMyLink(shareURL, "YAN1");
     }
 
     function displayRow(rowNumber, data) {
