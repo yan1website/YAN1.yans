@@ -158,10 +158,114 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.25);
         }
 
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
         .row-number {
             color: #7c8cff;
             font-size: 13px;
             margin-bottom: 10px;
+        }
+
+        .share-button {
+            flex: 0 0 auto;
+            border: 1px solid #5865f2;
+            border-radius: 8px;
+            padding: 5px 9px;
+            background: #181e35;
+            color: #dce1ff;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .share-button:hover,
+        .share-button:focus-visible {
+            background: #5865f2;
+            color: white;
+        }
+
+        .share-menu {
+            position: fixed;
+            z-index: 10;
+            top: 50%;
+            left: 50%;
+            width: min(360px, calc(100% - 32px));
+            padding: 22px;
+            border: 1px solid #3b4674;
+            border-radius: 12px;
+            background: #11162a;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+            transform: translate(-50%, -50%);
+        }
+
+        .share-overlay {
+            position: fixed;
+            z-index: 9;
+            inset: 0;
+            background: rgba(3, 6, 18, 0.72);
+        }
+
+        .share-menu-title {
+            margin: 0;
+            color: #dce1ff;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .share-menu-subtitle {
+            margin: 6px 0 18px;
+            color: #9099bd;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .share-menu-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px 12px;
+        }
+
+        .share-option {
+            display: grid;
+            justify-items: center;
+            gap: 7px;
+        }
+
+        .share-menu button {
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            border: 1px solid #3b4674;
+            border-radius: 50%;
+            background: #181e35;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .share-menu button:hover,
+        .share-menu button:focus-visible {
+            background: #5865f2;
+        }
+
+        .share-option-label {
+            color: #c5cbea;
+            font-size: 11px;
+        }
+
+        .share-close {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+            margin-top: 20px;
+            padding: 9px !important;
+            border-radius: 8px !important;
+            font-size: 13px !important;
         }
 
         .cell {
@@ -789,6 +893,163 @@
     // DISPLAY ONE ROW
     // =========================================================
 
+    function showShareMenu(shareURL) {
+
+        const overlay = document.createElement("div");
+        overlay.className = "share-overlay";
+
+        const menu = document.createElement("div");
+        menu.className = "share-menu";
+        menu.setAttribute("role", "dialog");
+        menu.setAttribute("aria-label", "Share link");
+        menu.setAttribute("aria-modal", "true");
+
+        const title = document.createElement("p");
+        title.className = "share-menu-title";
+        title.textContent = "Share link";
+        menu.appendChild(title);
+
+        const subtitle = document.createElement("p");
+        subtitle.className = "share-menu-subtitle";
+        subtitle.textContent = "Choose a destination";
+        menu.appendChild(subtitle);
+
+        const actions = document.createElement("div");
+        actions.className = "share-menu-actions";
+
+        const destinations = [
+            ["WhatsApp", "◉", "https://api.whatsapp.com/send?text=" + encodeURIComponent(shareURL)],
+            ["Telegram", "➤", "https://t.me/share/url?url=" + encodeURIComponent(shareURL)],
+            ["Facebook", "f", "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(shareURL)],
+            ["Email", "✉", "mailto:?subject=" + encodeURIComponent("YAN1 link") + "&body=" + encodeURIComponent(shareURL)]
+        ];
+
+        destinations.forEach(([label, icon, destinationURL]) => {
+            const option = document.createElement("div");
+            option.className = "share-option";
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = icon;
+            button.title = label;
+            button.setAttribute("aria-label", "Share with " + label);
+            button.addEventListener("click", () => {
+                window.open(destinationURL, "_blank", "noopener,noreferrer");
+                overlay.remove();
+                menu.remove();
+            });
+            option.appendChild(button);
+            actions.appendChild(option);
+        });
+
+        const copyOption = document.createElement("div");
+        copyOption.className = "share-option";
+        const copyButton = document.createElement("button");
+        copyButton.type = "button";
+        copyButton.textContent = "🔗";
+        copyButton.title = "Copy link";
+        copyButton.setAttribute("aria-label", "Copy link");
+        copyButton.addEventListener("click", async () => {
+            try {
+                await navigator.clipboard.writeText(shareURL);
+                logActivity("Share link copied to the clipboard.", "success");
+                overlay.remove();
+                menu.remove();
+            } catch (error) {
+                window.prompt("Copy this permanent link:", shareURL);
+            }
+        });
+        copyOption.appendChild(copyButton);
+        actions.appendChild(copyOption);
+        menu.appendChild(actions);
+
+        const closeButton = document.createElement("button");
+        closeButton.type = "button";
+        closeButton.className = "share-close";
+        closeButton.textContent = "Close";
+        closeButton.addEventListener("click", () => {
+            overlay.remove();
+            menu.remove();
+        });
+        menu.appendChild(closeButton);
+
+        overlay.addEventListener("click", () => {
+            overlay.remove();
+            menu.remove();
+        });
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(menu);
+    }
+
+    async function shareWebsite(shareURL) {
+
+        const openedInsideApp = isYAN1App();
+        const canUseShareAPI =
+            typeof navigator.share === "function" &&
+            (!navigator.canShare || navigator.canShare({ url: shareURL }));
+
+        if (!canUseShareAPI) {
+            if (openedInsideApp) {
+                const androidShareIntent =
+                    "intent:#Intent;action=android.intent.action.SEND;" +
+                    "type=text/plain;" +
+                    "S.android.intent.extra.TEXT=" + encodeURIComponent(shareURL) +
+                    ";end;";
+
+                window.location.href = androidShareIntent;
+                return true;
+            }
+
+            return false;
+        }
+
+        const shareData = openedInsideApp
+            ? {
+                title: "YAN1",
+                text: "Check out this YAN1 link:",
+                url: shareURL
+            }
+            : {
+                title: "YAN1",
+                text: shareURL,
+                url: shareURL
+            };
+
+        await navigator.share(shareData);
+
+        return true;
+    }
+
+    async function shareRow(columnBValue) {
+
+        const text = String(columnBValue || "").trim();
+
+        if (!text) {
+            logActivity("Share skipped because column B is empty.", "error");
+            return;
+        }
+
+        const shareURL =
+            "https://yan1website.github.io/YAN1.yans/index3.html?text=" +
+            encodeURIComponent(text);
+
+        try {
+            if (await shareWebsite(shareURL)) {
+                logActivity("Share link opened for column B.", "success");
+                return;
+            }
+
+            await navigator.clipboard.writeText(shareURL);
+            logActivity("Share link copied to the clipboard.", "success");
+        } catch (error) {
+            if (error.name === "AbortError") {
+                return;
+            }
+
+            logActivity("Sharing is unavailable in this browser. Open the HTTPS website to share this link.", "error");
+        }
+    }
+
     function displayRow(rowNumber, data) {
 
         const container =
@@ -810,7 +1071,19 @@
                 ? "Sheet Row " + rowNumber
                 : rowNumber;
 
-        card.appendChild(rowTitle);
+        const cardHeader = document.createElement("div");
+        cardHeader.className = "card-header";
+
+        const shareButton = document.createElement("button");
+        shareButton.className = "share-button";
+        shareButton.type = "button";
+        shareButton.textContent = "ᯓ➤";
+        shareButton.title = "Share this row";
+        shareButton.setAttribute("aria-label", "Share this row");
+        shareButton.addEventListener("click", () => shareRow(data[1]));
+
+        cardHeader.append(rowTitle, shareButton);
+        card.appendChild(cardHeader);
 
 
         data.forEach((value, index) => {
