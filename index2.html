@@ -981,43 +981,18 @@
         document.body.appendChild(menu);
     }
 
-    async function shareWebsite(shareURL) {
+    async function shareWebsite(shareURL = window.location.href) {
 
-        const openedInsideApp = isYAN1App();
-        const canUseShareAPI =
-            typeof navigator.share === "function" &&
-            (!navigator.canShare || navigator.canShare({ url: shareURL }));
-
-        if (!canUseShareAPI) {
-            if (openedInsideApp) {
-                const androidShareIntent =
-                    "intent:#Intent;action=android.intent.action.SEND;" +
-                    "type=text/plain;" +
-                    "S.android.intent.extra.TEXT=" + encodeURIComponent(shareURL) +
-                    ";end;";
-
-                window.location.href = androidShareIntent;
-                return true;
-            }
-
-            return false;
+        if (navigator.share) {
+            await navigator.share({
+                title: "YAN1",
+                text: "Check out this awesome page:",
+                url: shareURL
+            });
+            return true;
         }
 
-        const shareData = openedInsideApp
-            ? {
-                title: "YAN1",
-                text: "Check out this YAN1 link:",
-                url: shareURL
-            }
-            : {
-                title: "YAN1",
-                text: shareURL,
-                url: shareURL
-            };
-
-        await navigator.share(shareData);
-
-        return true;
+        return false;
     }
 
     async function shareRow(columnBValue) {
@@ -1039,14 +1014,13 @@
                 return;
             }
 
-            await navigator.clipboard.writeText(shareURL);
-            logActivity("Share link copied to the clipboard.", "success");
+            logActivity("Web Share API is unavailable. Open the HTTPS website to share this link.", "error");
         } catch (error) {
             if (error.name === "AbortError") {
                 return;
             }
 
-            logActivity("Sharing is unavailable in this browser. Open the HTTPS website to share this link.", "error");
+            logActivity("Sharing was cancelled or unavailable.", "error");
         }
     }
 
