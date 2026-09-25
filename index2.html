@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>YAN1 - Random Sheet Data</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #080b18;
+            color: white;
+        }
+
+        .container {
+            width: min(1000px, 94%);
+            margin: 40px auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        #status {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 25px;
+        }
+
+        .sheet-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 auto 18px;
+            padding: 9px 16px;
+            border: 1px solid #3b4674;
+            border-bottom: 3px solid #5865f2;
+            border-radius: 8px 8px 3px 3px;
+            background: #151b34;
+            color: #dce1ff;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .sheet-tab::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #67e8a5;
+        }
+
+        .activity-log {
+            margin-bottom: 25px;
+            padding: 16px;
+            background: #0e1326;
+            border: 1px solid #252c48;
+            border-radius: 14px;
+        }
+
+        .activity-log h2 {
+            margin: 0 0 12px;
+            font-size: 16px;
+            color: #dce1ff;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 0;
+            padding: 13px 15px;
+            border: 1px solid #3b4674;
+            border-radius: 10px;
+            background: #11162a;
+            color: white;
+            font: inherit;
+        }
+
+        .search-input:focus {
+            outline: 2px solid #5865f2;
+            outline-offset: 1px;
+        }
+
+        .search-button {
+            padding: 13px 22px;
+            border: none;
+            border-radius: 10px;
+            background: #5865f2;
+            color: white;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .search-button:hover {
+            background: #4752c4;
+        }
+
+        .search-button:disabled {
+            background: #333;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        #activityLog {
+            max-height: 210px;
+            overflow-y: auto;
+            display: grid;
+            gap: 8px;
+        }
+
+        .log-entry {
+            display: grid;
+            grid-template-columns: 78px 1fr;
+            gap: 10px;
+            padding: 8px 10px;
+            border-left: 3px solid #5865f2;
+            background: #181e35;
+            color: #c5cbea;
+            font-size: 13px;
+        }
+
+        .log-time {
+            color: #7c8cff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .log-entry.success {
+            border-left-color: #67e8a5;
+        }
+
+        .log-entry.error {
+            border-left-color: #ff6b6b;
+        }
+
+        #dataContainer {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: #11162a;
+            border: 1px solid #252c48;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+        }
+
+        .row-number {
+            color: #7c8cff;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .cell {
+            margin: 8px 0;
+            padding: 10px;
+            background: #181e35;
+            border-radius: 8px;
+            word-break: break-word;
+        }
+
+        .row-image {
+            display: block;
+            width: 100%;
+            max-height: 260px;
+            margin-top: 10px;
+            border-radius: 6px;
+            object-fit: contain;
+            background: #0b0f20;
+        }
+
+        .cell-number {
+            color: #777;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+
+        #moreButton {
+            display: block;
+            margin: 30px auto;
+            padding: 13px 30px;
+            border: none;
+            border-radius: 10px;
+            background: #5865f2;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #moreButton:hover {
+            background: #4752c4;
+        }
+
+        #moreButton:disabled {
+            background: #333;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        #status .error {
+            text-align: center;
+            color: #ff6b6b;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>YAN1</h1>
+
+    <div class="sheet-tab">Form Responses 1</div>
+
+    <section class="activity-log" aria-live="polite">
+        <h2>Activity Log</h2>
+        <div id="activityLog"></div>
+    </section>
+
+    <div id="status">
+        Loading...
+    </div>
+
+    <form class="search-form" onsubmit="searchSheet(event)">
+        <input
+            id="searchInput"
+            class="search-input"
+            type="search"
+            placeholder="Search by email in column B"
+            aria-label="Search by email in column B"
+        >
+        <button id="searchButton" class="search-button" type="submit">
+            Search
+        </button>
+    </form>
+
+    <div id="dataContainer"></div>
+
+    <button id="moreButton" onclick="loadMore()" disabled>
+        More
+    </button>
+
+</div>
+
+
+<script>
+
+    function isYAN1App() {
+        return (window.AndroidPython && typeof window.AndroidPython.executePython === "function");
+    }
+
+    function openInYAN1App() {
+        if (isYAN1App()) return;
+        if (sessionStorage.getItem("yan1_launched") === "true") return;
+        sessionStorage.setItem("yan1_launched", "true");
+
+        const currentURL = window.location.href;
+        const cleanPath = currentURL.replace(/^https?:\/\//, "");
+        const intentURL =
+            "intent://" + cleanPath + "#Intent;" +
+            "scheme=https;" +
+            "package=com.example1.yan1appgen1;" +
+            "S.browser_fallback_url=" + encodeURIComponent(currentURL) + ";" +
+            "end;";
+
+        window.location.href = intentURL;
+    }
+
+    setTimeout(openInYAN1App, 1200);
+
+    // =========================================================
+    // GOOGLE SHEET SETTINGS
+    // =========================================================
+
+    const SPREADSHEET_ID = "1wH5g2bnCNEeTNtP2_fzrssaVXtsW8lYsMPTj1zgRjQY";
+
+    // Change this if your sheet has a different name.
+    const SHEET_NAME = "Form Responses 1";
+
+    // Number of random rows per request.
+    const BATCH_SIZE = 15;
+
+
+    // =========================================================
+    // VARIABLES
+    // =========================================================
+
+    let totalRows = 0;
+
+    // Stores actual Google Sheet row numbers already displayed.
+    const usedRows = new Set();
+
+    let loading = false;
+    let searching = false;
+
+
+    // Add the newest action or response to the visible activity log.
+    function logActivity(message, type = "") {
+
+        const log = document.getElementById("activityLog");
+        const entry = document.createElement("div");
+        const time = document.createElement("span");
+        const text = document.createElement("span");
+
+        entry.className = "log-entry " + type;
+        time.className = "log-time";
+        time.textContent = new Date().toLocaleTimeString();
+        text.textContent = message;
+
+        entry.appendChild(time);
+        entry.appendChild(text);
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+    }
+
+
+    // =========================================================
+    // GOOGLE VISUALIZATION API URL
+    // =========================================================
+
+    function gvizURL(query) {
+
+        return (
+            "https://docs.google.com/spreadsheets/d/" +
+            SPREADSHEET_ID +
+            "/gviz/tq?" +
+            "sheet=" +
+            encodeURIComponent(SHEET_NAME) +
+            "&tqx=out:json" +
+            "&tq=" +
+            encodeURIComponent(query)
+        );
+    }
+
+
+    // =========================================================
+    // GET JSON FROM GVIZ
+    // =========================================================
+
+    async function getGViz(query) {
+
+        const response = await fetch(gvizURL(query));
+
+        if (!response.ok) {
+            throw new Error(
+                "Google Sheet request failed: " +
+                response.status
+            );
+        }
+
+        const text = await response.text();
+
+        // Google returns:
+        // google.visualization.Query.setResponse({...});
+
+        const start = text.indexOf("(");
+        const end = text.lastIndexOf(")");
+
+        if (start === -1 || end === -1) {
+            throw new Error("Invalid Google Sheet response.");
+        }
+
+        const jsonText = text.substring(
+            start + 1,
+            end
+        );
+
+        const result = JSON.parse(jsonText);
+
+        if (result.status === "error") {
+            const message = result.errors && result.errors[0]
+                ? result.errors[0].detailed_message || result.errors[0].message
+                : "Google Sheets returned an unknown error.";
+
+            throw new Error(message);
+        }
+
+        return result;
+    }
+
+
+    // =========================================================
+    // GET TOTAL NUMBER OF DATA ROWS
+    // =========================================================
+
+    async function getTotalRows() {
+
+        logActivity("Requesting the number of data rows.");
+
+        /*
+            Column A is used for counting.
+
+            Row 1 is assumed to be the header.
+            Therefore data starts at row 2.
+        */
+
+        const query = "select count(A)";
+
+        const result = await getGViz(query);
+
+        if (
+            !result.table ||
+            !result.table.rows ||
+            result.table.rows.length === 0
+        ) {
+            return 0;
+        }
+
+        const cell = result.table.rows[0].c[0];
+
+        if (!cell || cell.v === null || cell.v === undefined) {
+            return 0;
+        }
+
+        const total = Number(cell.v) || 0;
+        logActivity("Google Sheets responded with " + total + " data rows.", "success");
+        return total;
+    }
+
+
+    // =========================================================
+    // GENERATE UNIQUE RANDOM ROW NUMBERS
+    // =========================================================
+
+    function generateRandomRows(amount) {
+
+        const available = [];
+
+        /*
+            Actual Google Sheet rows:
+
+            data row 1 = Google row 2
+            data row 2 = Google row 3
+            etc.
+        */
+
+        for (let dataIndex = 1; dataIndex <= totalRows; dataIndex++) {
+
+            const actualSheetRow = dataIndex + 1;
+
+            if (!usedRows.has(actualSheetRow)) {
+                available.push(actualSheetRow);
+            }
+        }
+
+        // Shuffle available rows using Fisher-Yates.
+        for (let i = available.length - 1; i > 0; i--) {
+
+            const j = Math.floor(
+                Math.random() * (i + 1)
+            );
+
+            [available[i], available[j]] =
+                [available[j], available[i]];
+        }
+
+        return available.slice(
+            0,
+            Math.min(amount, available.length)
+        );
+    }
+
+
+    // =========================================================
+    // GET ONE SPECIFIC ROW
+    // =========================================================
+
+    async function getRow(rowNumber) {
+
+        /*
+            We use A:Z here.
+
+            Change Z if your sheet contains more columns.
+
+            Example:
+            A:Z = 26 columns
+            A:AZ = 52 columns
+            A:ZZ = 702 columns
+        */
+
+        const query =
+            "select * limit 1 offset " +
+            (rowNumber - 2);
+
+        const result = await getGViz(query);
+
+        if (
+            !result.table ||
+            !result.table.rows ||
+            result.table.rows.length === 0
+        ) {
+            return null;
+        }
+
+        const row = result.table.rows[0];
+
+        return row.c.map(cell => {
+
+            if (!cell || cell.v === null || cell.v === undefined) {
+                return "";
+            }
+
+            return cell.f !== undefined
+                ? cell.f
+                : cell.v;
+        });
+    }
+
+
+    // =========================================================
+    // SEARCH COLUMN B
+    // =========================================================
+
+    async function searchSheet(event) {
+
+        event.preventDefault();
+
+        if (searching) {
+            return;
+        }
+
+        const input =
+            document.getElementById("searchInput");
+
+        const button =
+            document.getElementById("searchButton");
+
+        const term = input.value.trim();
+
+        if (!term) {
+            logActivity("Search skipped because no text was entered.", "error");
+            document.getElementById("status").textContent =
+                "Enter text to search column B.";
+            input.focus();
+            return;
+        }
+
+        searching = true;
+        button.disabled = true;
+        document.getElementById("status").textContent =
+            "Searching column B...";
+        logActivity("Searching column B for: " + term);
+
+        try {
+
+            const escapedTerm =
+                term.replace(/'/g, "''").toLowerCase();
+
+            const query =
+                "select A, B, C, D, E where lower(B) contains '" +
+                escapedTerm +
+                "' limit 50";
+
+            const result = await getGViz(query);
+            const rows = result.table && result.table.rows
+                ? result.table.rows
+                : [];
+            const container = document.getElementById("dataContainer");
+
+            container.innerHTML = "";
+
+            rows.forEach((row, index) => {
+
+                const data = (row.c || []).map(cell => {
+
+                    if (!cell || cell.v === null || cell.v === undefined) {
+                        return "";
+                    }
+
+                    return cell.f !== undefined
+                        ? cell.f
+                        : cell.v;
+                });
+
+                displayRow("Search result " + (index + 1), data);
+            });
+
+            document.getElementById("status").textContent =
+                rows.length === 0
+                    ? "No matching results found."
+                    : "Found " + rows.length + " matching result" +
+                        (rows.length === 1 ? "" : "s") + ".";
+
+            logActivity(
+                rows.length + " matching result" +
+                (rows.length === 1 ? "" : "s") + " returned from column B.",
+                "success"
+            );
+
+        } catch (error) {
+
+            console.error(error);
+            document.getElementById("status").textContent =
+                "Search failed: " + error.message;
+            logActivity("Search failed: " + error.message, "error");
+
+        } finally {
+            searching = false;
+            button.disabled = false;
+        }
+    }
+
+
+    // =========================================================
+    // LOAD RANDOM ROWS
+    // =========================================================
+
+    async function loadRandomRows() {
+
+        if (loading) {
+            return;
+        }
+
+        loading = true;
+
+        logActivity("Load action started.");
+
+        const button =
+            document.getElementById("moreButton");
+
+        button.disabled = true;
+
+        try {
+
+            const randomRows =
+                generateRandomRows(BATCH_SIZE);
+
+            if (randomRows.length === 0) {
+
+                logActivity("No unused rows remain.", "success");
+
+                document.getElementById("status").textContent =
+                    "All rows have been displayed.";
+
+                button.textContent = "No More Rows";
+                button.disabled = true;
+
+                loading = false;
+
+                return;
+            }
+
+
+            document.getElementById("status").textContent =
+                "Loading " +
+                randomRows.length +
+                " random rows...";
+
+            logActivity("Requesting " + randomRows.length + " random rows.");
+
+
+            /*
+                IMPORTANT:
+
+                Promise.all() sends the requests at the
+                same time rather than waiting for one row
+                before requesting the next.
+            */
+
+            const results = await Promise.all(
+
+                randomRows.map(async rowNumber => {
+
+                    try {
+
+                        const data =
+                            await getRow(rowNumber);
+
+                        return {
+                            rowNumber,
+                            data
+                        };
+
+                    } catch (error) {
+
+                        console.error(
+                            "Row " +
+                            rowNumber +
+                            " failed:",
+                            error
+                        );
+
+                        logActivity("Sheet row " + rowNumber + " failed: " + error.message, "error");
+
+                        return {
+                            rowNumber,
+                            data: null
+                        };
+                    }
+                })
+            );
+
+
+            let displayed = 0;
+
+
+            results.forEach(result => {
+
+                /*
+                    Mark the row as used even if the row
+                    happens to be empty.
+                */
+
+                usedRows.add(result.rowNumber);
+
+
+                if (
+                    result.data &&
+                    result.data.length > 0
+                ) {
+
+                    displayRow(
+                        result.rowNumber,
+                        result.data
+                    );
+
+                    displayed++;
+                    logActivity("Displayed response from sheet row " + result.rowNumber + ".", "success");
+                } else {
+                    logActivity("Sheet row " + result.rowNumber + " returned no values.", "error");
+                }
+            });
+
+
+            const remaining =
+                totalRows - usedRows.size;
+
+
+            document.getElementById("status").textContent =
+                "Showing " +
+                usedRows.size +
+                " of " +
+                totalRows +
+                " rows";
+
+            logActivity("Load action completed: " + displayed + " rows displayed.", "success");
+
+
+            if (remaining <= 0) {
+
+                button.textContent =
+                    "No More Rows";
+
+                button.disabled = true;
+
+            } else {
+
+                button.textContent =
+                    "More";
+
+                button.disabled = false;
+            }
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            logActivity("Load action failed: " + error.message, "error");
+
+            document.getElementById("status").innerHTML =
+                '<div class="error">' +
+                "Unable to load the Google Sheet.<br>" +
+                error.message +
+                "</div>";
+
+            button.disabled = false;
+        }
+
+        loading = false;
+    }
+
+
+    // =========================================================
+    // DISPLAY ONE ROW
+    // =========================================================
+
+    function displayRow(rowNumber, data) {
+
+        const container =
+            document.getElementById("dataContainer");
+
+        const card =
+            document.createElement("div");
+
+        card.className = "card";
+
+
+        const rowTitle =
+            document.createElement("div");
+
+        rowTitle.className = "row-number";
+
+        rowTitle.textContent =
+            typeof rowNumber === "number"
+                ? "Sheet Row " + rowNumber
+                : rowNumber;
+
+        card.appendChild(rowTitle);
+
+
+        data.forEach((value, index) => {
+
+            /*
+                Ignore completely empty cells.
+            */
+
+            if (
+                value === null ||
+                value === undefined ||
+                String(value).trim() === ""
+            ) {
+                return;
+            }
+
+            if (index === 2) {
+
+                try {
+
+                    const imageURL = new URL(String(value));
+
+                    if (
+                        imageURL.protocol === "http:" ||
+                        imageURL.protocol === "https:"
+                    ) {
+
+                        const image =
+                            document.createElement("img");
+
+                        image.className = "row-image";
+                        image.src = imageURL.href;
+                        image.alt = "Image from sheet row " + rowNumber;
+                        image.loading = "lazy";
+
+                        card.insertBefore(image, card.firstChild.nextSibling);
+                    }
+
+                } catch (error) {
+                    // Ignore invalid image URLs.
+                }
+
+                return;
+            }
+
+
+            const cell =
+                document.createElement("div");
+
+            cell.className = "cell";
+
+
+            const valueElement =
+                document.createElement("span");
+
+            valueElement.textContent =
+                String(value);
+
+
+            cell.appendChild(valueElement);
+
+            card.appendChild(cell);
+        });
+
+
+        container.appendChild(card);
+    }
+
+
+    // =========================================================
+    // COLUMN NUMBER → LETTER
+    // =========================================================
+
+    function getColumnName(number) {
+
+        let result = "";
+
+        while (number > 0) {
+
+            const remainder =
+                (number - 1) % 26;
+
+            result =
+                String.fromCharCode(
+                    65 + remainder
+                ) + result;
+
+            number =
+                Math.floor(
+                    (number - 1) / 26
+                );
+        }
+
+        return result;
+    }
+
+
+    // =========================================================
+    // MORE BUTTON
+    // =========================================================
+
+    function loadMore() {
+        logActivity("More button clicked.");
+        loadRandomRows();
+    }
+
+
+    // =========================================================
+    // START WHEN WEBSITE OPENS
+    // =========================================================
+
+    async function start() {
+
+        const status =
+            document.getElementById("status");
+
+        try {
+
+            logActivity("Website opened; checking Form Responses 1.");
+
+            status.textContent =
+                "Checking Google Sheet...";
+
+
+            totalRows =
+                await getTotalRows();
+
+
+            console.log(
+                "Total data rows:",
+                totalRows
+            );
+
+
+            if (totalRows <= 0) {
+
+                logActivity("The sheet contains no data rows.", "error");
+
+                status.textContent =
+                    "No data rows found.";
+
+                return;
+            }
+
+
+            status.textContent =
+                "Found " +
+                totalRows +
+                " data rows. Loading random rows...";
+
+
+            await loadRandomRows();
+
+        } catch (error) {
+
+            console.error(error);
+
+            logActivity("Startup failed: " + error.message, "error");
+
+            status.innerHTML =
+                '<div class="error">' +
+                "Could not access the Google Sheet.<br><br>" +
+                error.message +
+                "</div>";
+        }
+    }
+
+
+    // Start automatically.
+    start();
+
+</script>
+
+</body>
+</html>
