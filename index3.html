@@ -72,11 +72,13 @@
 
     #results {
       display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
       gap: 16px;
     }
 
     .result-card {
-      padding: 22px;
+      min-width: 0;
+      padding: 18px;
       background: rgba(17, 22, 42, 0.92);
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -84,12 +86,47 @@
     }
 
     .result-title {
-      margin: 0 0 16px;
-      color: var(--accent);
-      font-size: 0.8rem;
+      margin: 0;
+      color: #7c8cff;
+      font-size: 0.82rem;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .share-button {
+      flex: 0 0 auto;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 6px 10px;
+      background: var(--cell);
+      color: var(--ink);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .share-button:hover, .share-button:focus-visible {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .row-image {
+      display: block;
+      width: 100%;
+      max-height: 260px;
+      margin: 10px 0;
+      border-radius: 6px;
+      object-fit: contain;
+      background: #0b0f20;
     }
 
     .cell {
@@ -201,18 +238,49 @@
         title.className = "result-title";
         title.textContent = "Matching row " + (rowIndex + 1);
         card.className = "result-card";
-        card.appendChild(title);
 
-        (row.c || []).forEach((cell, columnIndex) => {
+        const cells = row.c || [];
+        const columnBValue = cellValue(cells[1]).trim();
+        const header = document.createElement("div");
+        header.className = "card-header";
+        const shareButton = document.createElement("button");
+        shareButton.className = "share-button";
+        shareButton.type = "button";
+        shareButton.textContent = "Share";
+        shareButton.title = "Share this row";
+        shareButton.setAttribute("aria-label", "Share this row");
+        shareButton.addEventListener("click", () => shareRow(columnBValue));
+        header.append(title, shareButton);
+        card.appendChild(header);
+
+        cells.forEach((cell, columnIndex) => {
           const value = cellValue(cell);
           if (!value.trim()) return;
+
+          // Column C contains the row image URL, as in index2.html.
+          if (columnIndex === 2) {
+            try {
+              const imageURL = new URL(value);
+              if (imageURL.protocol === "http:" || imageURL.protocol === "https:") {
+                const image = document.createElement("img");
+                image.className = "row-image";
+                image.src = imageURL.href;
+                image.alt = "Image from matching row " + (rowIndex + 1);
+                image.loading = "lazy";
+                card.appendChild(image);
+              }
+            } catch (error) {
+              // Ignore values in column C that are not valid image URLs.
+            }
+            return;
+          }
 
           const cellElement = document.createElement("div");
           const label = document.createElement("span");
           const valueElement = document.createElement("span");
           cellElement.className = "cell";
           label.className = "cell-label";
-          label.textContent = "Column " + String.fromCharCode(65 + columnIndex);
+          label.textContent = "Column " + getColumnName(columnIndex + 1);
           valueElement.textContent = value;
           cellElement.append(label, valueElement);
           card.appendChild(cellElement);
@@ -220,6 +288,51 @@
 
         results.appendChild(card);
       });
+    }
+
+    function getColumnName(number) {
+      let name = "";
+      while (number > 0) {
+        const remainder = (number - 1) % 26;
+        name = String.fromCharCode(65 + remainder) + name;
+        number = Math.floor((number - 1) / 26);
+      }
+      return name;
+    }
+
+    function shareRow(columnBValue) {
+      if (!columnBValue) {
+        status.textContent = "This row has no value in column B to share.";
+        status.className = "error";
+        return;
+      }
+
+      const shareURL = "https://yan1website.github.io/YAN1.yans/index3.html?text=" +
+        encodeURIComponent(columnBValue);
+      const shareText = "Take a look at this link:";
+
+      if (window.Android && typeof window.Android.shareText === "function") {
+        try {
+          window.Android.shareText(shareURL);
+          return;
+        } catch (error) {
+          console.error("Android sharing failed:", error);
+        }
+      }
+
+      if (typeof navigator.share === "function") {
+        navigator.share({ title: "YAN1", text: shareText, url: shareURL })
+          .catch(error => {
+            if (error.name !== "AbortError") {
+              status.textContent = "Sharing was unavailable.";
+              status.className = "error";
+            }
+          });
+        return;
+      }
+
+      status.textContent = "No supported sharing method is available.";
+      status.className = "error";
     }
 
     async function findMatchingRows() {
