@@ -364,6 +364,44 @@
 <script>
 
     // =========================================================
+    // YAN1 APP REDIRECTION
+    // =========================================================
+
+    function isYAN1App() {
+        return (
+            window.AndroidPython &&
+            typeof window.AndroidPython.executePython === "function"
+        );
+    }
+
+    function openInYAN1App() {
+
+        if (isYAN1App()) {
+            return;
+        }
+
+        if (sessionStorage.getItem("yan1_launched") === "true") {
+            return;
+        }
+
+        sessionStorage.setItem("yan1_launched", "true");
+
+        const currentURL = window.location.href;
+        const cleanPath = currentURL.replace(/^https?:\/\//, "");
+        const intentURL =
+            "intent://" + cleanPath +
+            "#Intent;" +
+            "scheme=https;" +
+            "package=com.example1.yan1appgen1;" +
+            "S.browser_fallback_url=" + encodeURIComponent(currentURL) +
+            ";end;";
+
+        window.location.href = intentURL;
+    }
+
+    setTimeout(openInYAN1App, 1200);
+
+    // =========================================================
     // GOOGLE SHEET SETTINGS
     // =========================================================
 
