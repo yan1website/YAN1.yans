@@ -384,8 +384,6 @@
         window.location.href = intentURL;
     }
 
-    setTimeout(openInYAN1App, 1200);
-
     // =========================================================
     // GOOGLE SHEET SETTINGS
     // =========================================================
@@ -1014,7 +1012,7 @@
                 return;
             }
 
-            logActivity("Web Share API is unavailable. Open the HTTPS website to share this link.", "error");
+            logActivity("Web Share API is unavailable in this browser.", "error");
         } catch (error) {
             if (error.name === "AbortError") {
                 return;
