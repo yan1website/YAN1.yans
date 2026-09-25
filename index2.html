@@ -870,12 +870,25 @@
     // DISPLAY ONE ROW
     // =========================================================
 
-    function shareMyLink(urlToShare, titleToShare) {
+    function shareURL(urlToShare, titleToShare, textToShare) {
 
-        if (navigator.share) {
+        if (
+            window.Android &&
+            typeof window.Android.shareText === "function"
+        ) {
+            try {
+                window.Android.shareText(urlToShare);
+                logActivity("Android share sheet opened.", "success");
+                return;
+            } catch (error) {
+                console.error("Android sharing failed:", error);
+            }
+        }
+
+        if (typeof navigator.share === "function") {
             navigator.share({
                 title: titleToShare || "Check this out!",
-                text: "Take a look at this link:",
+                text: textToShare || "Take a look at this link:",
                 url: urlToShare
             }).then(() => {
                 logActivity("Share sheet opened.", "success");
@@ -887,25 +900,15 @@
             return;
         }
 
-        logActivity("Web Share API not available in this browser.", "error");
+        logActivity("No supported sharing method is available.", "error");
+    }
+
+    function shareMyLink(urlToShare, titleToShare) {
+        shareURL(urlToShare, titleToShare, "Take a look at this link:");
     }
 
     function shareCurrentPage() {
-
-        if (navigator.share) {
-            navigator.share({
-                title: document.title,
-                text: "Check out this page:",
-                url: window.location.href
-            }).catch(error => {
-                if (error.name !== "AbortError") {
-                    logActivity("Sharing was cancelled or unavailable.", "error");
-                }
-            });
-            return;
-        }
-
-        logActivity("Web Share API not available in this browser.", "error");
+        shareURL(window.location.href, document.title, "Check out this page:");
     }
 
     function shareRow(columnBValue) {
